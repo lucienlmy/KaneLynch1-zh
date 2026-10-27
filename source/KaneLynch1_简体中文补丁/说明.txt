@@ -1,0 +1,22 @@
+《Kane & Lynch: Dead Men》（喋血双雄 / 凯恩与林奇：死人）简体中文补丁
+
+适用：Steam 版（单人模式；多人模式 Fragile Alliance 的在线服务早已关闭）。
+
+安装：双击「安装简体中文.bat」，会自动找到游戏文件夹，核对原版文件后在 18 个场景封包尾部加上中文数据（约 2 分钟，请勿中途关闭）。
+卸载：双击「卸载简体中文.bat」，把封包截回原长度，等同原版（也可用 Steam「验证游戏文件完整性」）。
+
+原理：翻译文字覆盖英文槽，字体补进封包，不改任何 exe，不需要 Python。
+游戏语言请保持英文（Steam 内容语言英文）。
+
+Win11 常见问题：
+1. 点启动没反应：先装游戏文件夹内的 XLiveRedist\XLiveRedist01.02.0241.00.msi（Games for Windows LIVE）。
+2. 出现「Direct3D: Unable to create device」：打开 %LOCALAPPDATA%\kaneandlynch\main.ini，在最后加一行 Window 1（窗口模式），需要的话再加 Resolution 1920x1200。
+3. 第一次进游戏 GFWL 要建立配置文件：选 Create New Profile → 输入名字 → Done，不需要在线账号。
+4. 有手柄连着时游戏不理键盘，这是游戏本身的行为。
+
+翻译与范围：
+- 文字由 AI 翻译（Gemini／Antigravity）、Claude 制作工具并在游戏内验证，共 3,739 句单人模式文字（菜单、提示、过场与游戏中字幕）。
+- 原版就是外语的喊话（日文罗马拼音、西班牙文）照原版保留；制作人员名单不翻；预渲染视频没有字幕轨，无法加字幕。
+- 译名：Kane＝凯恩、Lynch＝林奇、Jenny＝珍妮、The7＝七人帮、Retomoto＝濑户本。
+
+本补丁纯属个人作品，欢迎其他社区转载；禁止其乐社区（Keylol）及其附属社区／群组／团体转载。
