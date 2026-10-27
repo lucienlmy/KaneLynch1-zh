@@ -43,12 +43,12 @@ zip 里有两个文件夹，按需要使用：
 
 ## 截图
 
-| 繁体版 | |
+| 简体版 | 繁体版 |
 |---|---|
-| ![主菜单](docs/01_tw_menu.jpg) | ![选项](docs/02_tw_options.jpg) |
-| ![战役设置](docs/03_tw_campaign.jpg) | ![过场字幕](docs/04_tw_cutscene.jpg) |
-
-CN_SCREENSHOTS
+| ![简体 主菜单](docs/06_cn_menu.jpg) | ![繁体 主菜单](docs/01_tw_menu.jpg) |
+| ![简体 视频选项](docs/07_cn_options.jpg) | ![繁体 视频选项](docs/02_tw_options.jpg) |
+| ![简体 战役设置](docs/08_cn_campaign.jpg) | ![繁体 战役设置](docs/03_tw_campaign.jpg) |
+| ![简体 第一章字幕](docs/09_cn_ingame.jpg) | ![繁体 第一章过场](docs/04_tw_cutscene.jpg) |
 
 ## 注意事项
 
