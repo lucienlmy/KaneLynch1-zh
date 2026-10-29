@@ -1,12 +1,14 @@
 ﻿# 《Kane & Lynch: Dead Men》中文補丁 安裝／移除引擎（不需要 Python）
 # 用法：klpatch.ps1 -Mode install | remove | verify  [-Game "遊戲資料夾"]
 # 原理：場景 zip 只在檔尾追加重建後的條目與新中央目錄，原始位元組不動；移除＝截回原長度並核對 SHA-256。
+# 片頭影片（manifest 的 files）是整檔替換：核對原檔 SHA-256 → 原檔改名 .orig → 複製新檔；移除＝刪新檔、.orig 改回來。
 param([ValidateSet('install', 'remove', 'verify')][string]$Mode = 'install', [string]$Game = '')
 $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $Data = Join-Path $here 'data'
 $M = Get-Content (Join-Path $Data 'manifest.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+$Files = @(); if ($M.PSObject.Properties['files']) { $Files = @($M.files) }
 
 Add-Type -Language CSharp -TypeDefinition @'
 using System;
@@ -152,6 +154,13 @@ if ($Mode -eq 'install') {
         if (-not (Test-Path -LiteralPath $p)) { throw "找不到 $($z.rel)" }
         if ([KL1.Engine]::CheckOriginal($p, [long]$z.orig_size, $z.orig_sha256) -lt 0) { throw "檔案與支援的 Steam 版不符：$($z.rel)（請先用 Steam 驗證遊戲檔案完整性）" }
     }
+    foreach ($f in $Files) {
+        $p = Join-Path $game $f.rel; $bk = "$p.orig"
+        $okBk = (Test-Path -LiteralPath $bk) -and ([KL1.Engine]::CheckOriginal($bk, [long]$f.orig_size, $f.orig_sha256) -eq 0)
+        $okP = (Test-Path -LiteralPath $p) -and ([KL1.Engine]::CheckOriginal($p, [long]$f.orig_size, $f.orig_sha256) -eq 0)
+        $okNew = (Test-Path -LiteralPath $p) -and ([KL1.Engine]::CheckOriginal($p, [long]$f.new_size, $f.new_sha256) -eq 0)
+        if (-not ($okBk -or $okP -or $okNew)) { throw "檔案與支援的 Steam 版不符：$($f.rel)（請先用 Steam 驗證遊戲檔案完整性）" }
+    }
     foreach ($z in $M.zips) {
         $p = Join-Path $game $z.rel
         if ((Get-Item -LiteralPath $p).Length -gt $z.orig_size) { [KL1.Engine]::Truncate($p, [long]$z.orig_size) }
@@ -160,8 +169,20 @@ if ($Mode -eq 'install') {
         [KL1.Engine]::PatchZip($p, [long]$z.orig_size, $Data, [string[]]$names, [string[]]$deltas, [string[]]$fulls)
         $ok++
     }
+    foreach ($f in $Files) {
+        $p = Join-Path $game $f.rel; $bk = "$p.orig"
+        Write-Host "  安裝 $($f.rel)（整檔替換，原檔保留為 $(Split-Path -Leaf $bk)）"
+        $okBk = (Test-Path -LiteralPath $bk) -and ([KL1.Engine]::CheckOriginal($bk, [long]$f.orig_size, $f.orig_sha256) -eq 0)
+        if (-not $okBk) {
+            if ((Test-Path -LiteralPath $p) -and ([KL1.Engine]::CheckOriginal($p, [long]$f.orig_size, $f.orig_sha256) -eq 0)) { Move-Item -LiteralPath $p -Destination $bk -Force }
+            else { Write-Host '    （沒有原檔可備份；移除補丁時請用 Steam「驗證遊戲檔案完整性」還原這個檔）' }
+        }
+        Copy-Item -LiteralPath (Join-Path $Data $f.file) -Destination $p -Force
+        if ([KL1.Engine]::CheckOriginal($p, [long]$f.new_size, $f.new_sha256) -ne 0) { throw "複製後校驗失敗：$($f.rel)" }
+        $ok++
+    }
     @{ version = $M.version; lang = $M.lang; installed = (Get-Date).ToString('s') } | ConvertTo-Json | Set-Content -LiteralPath $state -Encoding UTF8
-    Write-Host "`n完成：$ok 個封包已安裝（$([int]$sw.Elapsed.TotalSeconds) 秒）。"
+    Write-Host "`n完成：$ok 個檔案已安裝（$([int]$sw.Elapsed.TotalSeconds) 秒）。"
     Write-Host '提醒：第一次玩要裝遊戲內附的 Games for Windows LIVE（XLiveRedist\XLiveRedist01.02.0241.00.msi）；'
     Write-Host '      若出現 Direct3D 錯誤，請在 %LOCALAPPDATA%\kaneandlynch\main.ini 加一行 Window 1（視窗模式）。'
 } elseif ($Mode -eq 'remove') {
@@ -175,12 +196,32 @@ if ($Mode -eq 'install') {
             $ok++
         }
     }
+    foreach ($f in $Files) {
+        $p = Join-Path $game $f.rel; $bk = "$p.orig"
+        if (Test-Path -LiteralPath $bk) {
+            if (Test-Path -LiteralPath $p) { Remove-Item -LiteralPath $p -Force }
+            Move-Item -LiteralPath $bk -Destination $p -Force
+            $st = [KL1.Engine]::CheckOriginal($p, [long]$f.orig_size, $f.orig_sha256)
+            Write-Host ("  已還原 {0}{1}" -f $f.rel, $(if ($st -eq 0) { '' } else { '（雜湊不符，請用 Steam 驗證完整性）' }))
+            $ok++
+        } elseif ((Test-Path -LiteralPath $p) -and ([KL1.Engine]::CheckOriginal($p, [long]$f.orig_size, $f.orig_sha256) -ne 0)) {
+            Write-Host "  $($f.rel)：找不到原檔備份，請用 Steam「驗證遊戲檔案完整性」還原"
+        }
+    }
     Remove-Item -LiteralPath $state -ErrorAction SilentlyContinue
-    Write-Host "`n完成：已還原 $ok 個封包。"
+    Write-Host "`n完成：已還原 $ok 個檔案。"
 } else {
     foreach ($z in $M.zips) {
         $p = Join-Path $game $z.rel
         $st = [KL1.Engine]::CheckOriginal($p, [long]$z.orig_size, $z.orig_sha256)
         Write-Host ("  {0}: {1}" -f $z.rel, @{ 0 = '原版'; 1 = '已安裝補丁'; -1 = '不是原版' }[[int]$st])
+    }
+    foreach ($f in $Files) {
+        $p = Join-Path $game $f.rel; $st = -1
+        if (Test-Path -LiteralPath $p) {
+            if ([KL1.Engine]::CheckOriginal($p, [long]$f.orig_size, $f.orig_sha256) -eq 0) { $st = 0 }
+            elseif ([KL1.Engine]::CheckOriginal($p, [long]$f.new_size, $f.new_sha256) -eq 0) { $st = 1 }
+        }
+        Write-Host ("  {0}: {1}" -f $f.rel, @{ 0 = '原版'; 1 = '已安裝補丁'; -1 = '不是原版' }[[int]$st])
     }
 }
