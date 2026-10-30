@@ -2,7 +2,7 @@
 
 对应 Steam 版和 GOG 版（同一份补丁通用，安装程序会自动找到游戏文件夹）。一键安装、一键还原，不用装任何软件，不改 exe。
 
-**[⬇ 点这里到 Releases 下载 KaneLynch1_zh_v1.1.zip（约 166 MB）](https://github.com/toBerlinWay/KaneLynch1-zh/releases/latest)**
+**[⬇ 点这里到 Releases 下载 KaneLynch1_zh_v1.1.zip（约 169 MB）](https://github.com/toBerlinWay/KaneLynch1-zh/releases/latest)**
 
 > 请从 Releases 下载 zip。直接点绿色 Code → Download ZIP 下载到的只有安装脚本，没有补丁文件，装不了。
 
