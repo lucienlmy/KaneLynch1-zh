@@ -135,10 +135,39 @@ function Find-Game {
         $vdf = Join-Path $steam 'steamapps\libraryfolders.vdf'
         if (Test-Path $vdf) { foreach ($m in [regex]::Matches((Get-Content $vdf -Raw), '"path"\s+"([^"]+)"')) { $cands += Join-Path ($m.Groups[1].Value -replace '\\\\', '\') 'steamapps\common\Kane and Lynch Dead Men' } }
     }
-    foreach ($c in $cands) { if (Test-Path (Join-Path $c 'kaneandlynch.exe')) { return $c } }
-    $typed = (Read-Host '找不到遊戲資料夾，請貼上含 kaneandlynch.exe 的資料夾路徑').Trim('"', ' ')
+    foreach ($k in 'HKLM:\SOFTWARE\WOW6432Node\GOG.com\Games\1721096025', 'HKLM:\SOFTWARE\GOG.com\Games\1721096025') {
+        try { $gp = (Get-ItemProperty $k -ErrorAction Stop).path; if ($gp) { $cands += $gp } } catch { }
+    }
+    foreach ($root in @("${env:ProgramFiles(x86)}\GOG Galaxy\Games", 'C:\GOG Games', 'D:\GOG Games', 'E:\GOG Games', 'C:\', 'D:\', 'E:\')) { if ($root) { $cands += Join-Path $root 'Kane and Lynch Dead Men' } }
+    $found = @()
+    foreach ($c in $cands) {
+        if ($c -and (Test-Path (Join-Path $c 'kaneandlynch.exe'))) { $full = (Resolve-Path $c).Path.TrimEnd('\'); if ($found -notcontains $full) { $found += $full } }
+    }
+    if ($found.Count -eq 1) { return $found[0] }
+    if ($found.Count -gt 1) {
+        Write-Host '找到多個遊戲資料夾（Steam／GOG 版都可以）：'
+        for ($i = 0; $i -lt $found.Count; $i++) { Write-Host ("  [{0}] {1}" -f ($i + 1), $found[$i]) }
+        $pick = Read-Host '要安裝到哪一個？輸入編號'
+        if ($pick -match '^\d+$' -and [int]$pick -ge 1 -and [int]$pick -le $found.Count) { return $found[[int]$pick - 1] }
+    }
+    $typed = (Read-Host '找不到遊戲資料夾，請貼上含 kaneandlynch.exe 的資料夾路徑（Steam 版或 GOG 版都可以）').Trim('"', ' ')
     if (Test-Path (Join-Path $typed 'kaneandlynch.exe')) { return $typed }
     throw '找不到遊戲資料夾'
+}
+
+# 一個封包可能有多種原版（Steam 版、GOG 版…）：manifest 的 orig_size／orig_sha256 是主要版本，alts[] 是其他版本（可各自帶 entries）。
+# 回傳符合這個檔案的版本（hashtable：label／orig_size／orig_sha256／entries），都不符合回傳 $null。
+function Resolve-Orig($z, $p) {
+    if (-not (Test-Path -LiteralPath $p)) { return $null }
+    $vars = @(@{ label = 'steam'; orig_size = [long]$z.orig_size; orig_sha256 = $z.orig_sha256; entries = $z.entries })
+    if ($z.PSObject.Properties['alts']) {
+        foreach ($a in $z.alts) {
+            $ent = $z.entries; if ($a.PSObject.Properties['entries']) { $ent = $a.entries }
+            $vars += @{ label = $a.label; orig_size = [long]$a.orig_size; orig_sha256 = $a.orig_sha256; entries = $ent }
+        }
+    }
+    foreach ($v in $vars) { if ([KL1.Engine]::CheckOriginal($p, [long]$v.orig_size, $v.orig_sha256) -ge 0) { return $v } }
+    return $null
 }
 
 $game = Find-Game
@@ -149,24 +178,29 @@ $sw = [Diagnostics.Stopwatch]::StartNew(); $ok = 0
 
 if ($Mode -eq 'install') {
     Write-Host '檢查遊戲檔案…'
+    $variants = @{}
     foreach ($z in $M.zips) {
         $p = Join-Path $game $z.rel
         if (-not (Test-Path -LiteralPath $p)) { throw "找不到 $($z.rel)" }
-        if ([KL1.Engine]::CheckOriginal($p, [long]$z.orig_size, $z.orig_sha256) -lt 0) { throw "檔案與支援的 Steam 版不符：$($z.rel)（請先用 Steam 驗證遊戲檔案完整性）" }
+        $v = Resolve-Orig $z $p
+        if (-not $v) { throw "檔案與支援的版本（Steam／GOG）不符：$($z.rel)（Steam 版請先「驗證遊戲檔案完整性」，GOG 版請用 Galaxy「驗證／修復」，再重新安裝補丁）" }
+        $variants[$z.rel] = $v
     }
     foreach ($f in $Files) {
         $p = Join-Path $game $f.rel; $bk = "$p.orig"
         $okBk = (Test-Path -LiteralPath $bk) -and ([KL1.Engine]::CheckOriginal($bk, [long]$f.orig_size, $f.orig_sha256) -eq 0)
         $okP = (Test-Path -LiteralPath $p) -and ([KL1.Engine]::CheckOriginal($p, [long]$f.orig_size, $f.orig_sha256) -eq 0)
         $okNew = (Test-Path -LiteralPath $p) -and ([KL1.Engine]::CheckOriginal($p, [long]$f.new_size, $f.new_sha256) -eq 0)
-        if (-not ($okBk -or $okP -or $okNew)) { throw "檔案與支援的 Steam 版不符：$($f.rel)（請先用 Steam 驗證遊戲檔案完整性）" }
+        if (-not ($okBk -or $okP -or $okNew)) { throw "檔案與支援的版本（Steam／GOG）不符：$($f.rel)（Steam 版請先「驗證遊戲檔案完整性」，GOG 版請用 Galaxy「驗證／修復」，再重新安裝補丁）" }
     }
     foreach ($z in $M.zips) {
         $p = Join-Path $game $z.rel
-        if ((Get-Item -LiteralPath $p).Length -gt $z.orig_size) { [KL1.Engine]::Truncate($p, [long]$z.orig_size) }
-        Write-Host "  安裝 $($z.rel)"
-        $names = @($z.entries | ForEach-Object { $_.name }); $deltas = @($z.entries | ForEach-Object { if ($_.delta) { $_.delta } else { '' } }); $fulls = @($z.entries | ForEach-Object { if ($_.full) { $_.full } else { '' } })
-        [KL1.Engine]::PatchZip($p, [long]$z.orig_size, $Data, [string[]]$names, [string[]]$deltas, [string[]]$fulls)
+        $v = $variants[$z.rel]
+        if ((Get-Item -LiteralPath $p).Length -gt $v.orig_size) { [KL1.Engine]::Truncate($p, [long]$v.orig_size) }
+        $tag = ''; if ($v.label -ne 'steam') { $tag = "（$($v.label) 版原檔）" }
+        Write-Host "  安裝 $($z.rel)$tag"
+        $names = @($v.entries | ForEach-Object { $_.name }); $deltas = @($v.entries | ForEach-Object { if ($_.delta) { $_.delta } else { '' } }); $fulls = @($v.entries | ForEach-Object { if ($_.full) { $_.full } else { '' } })
+        [KL1.Engine]::PatchZip($p, [long]$v.orig_size, $Data, [string[]]$names, [string[]]$deltas, [string[]]$fulls)
         $ok++
     }
     foreach ($f in $Files) {
@@ -175,24 +209,28 @@ if ($Mode -eq 'install') {
         $okBk = (Test-Path -LiteralPath $bk) -and ([KL1.Engine]::CheckOriginal($bk, [long]$f.orig_size, $f.orig_sha256) -eq 0)
         if (-not $okBk) {
             if ((Test-Path -LiteralPath $p) -and ([KL1.Engine]::CheckOriginal($p, [long]$f.orig_size, $f.orig_sha256) -eq 0)) { Move-Item -LiteralPath $p -Destination $bk -Force }
-            else { Write-Host '    （沒有原檔可備份；移除補丁時請用 Steam「驗證遊戲檔案完整性」還原這個檔）' }
+            else { Write-Host '    （沒有原檔可備份；移除補丁時請用 Steam「驗證遊戲檔案完整性」或 GOG Galaxy「驗證／修復」還原這個檔）' }
         }
         Copy-Item -LiteralPath (Join-Path $Data $f.file) -Destination $p -Force
         if ([KL1.Engine]::CheckOriginal($p, [long]$f.new_size, $f.new_sha256) -ne 0) { throw "複製後校驗失敗：$($f.rel)" }
         $ok++
     }
-    @{ version = $M.version; lang = $M.lang; installed = (Get-Date).ToString('s') } | ConvertTo-Json | Set-Content -LiteralPath $state -Encoding UTF8
+    $isGog = Test-Path (Join-Path $game 'goggame-1721096025.info')
+    @{ version = $M.version; lang = $M.lang; platform = $(if ($isGog) { 'gog' } else { 'steam' }); installed = (Get-Date).ToString('s') } | ConvertTo-Json | Set-Content -LiteralPath $state -Encoding UTF8
     Write-Host "`n完成：$ok 個檔案已安裝（$([int]$sw.Elapsed.TotalSeconds) 秒）。"
-    Write-Host '提醒：第一次玩要裝遊戲內附的 Games for Windows LIVE（XLiveRedist\XLiveRedist01.02.0241.00.msi）；'
+    if ($isGog) { Write-Host '提醒：GOG 版不需要 Games for Windows LIVE；' }
+    else { Write-Host '提醒：第一次玩要裝遊戲內附的 Games for Windows LIVE（XLiveRedist\XLiveRedist01.02.0241.00.msi）；' }
     Write-Host '      若出現 Direct3D 錯誤，請在 %LOCALAPPDATA%\kaneandlynch\main.ini 加一行 Window 1（視窗模式）。'
 } elseif ($Mode -eq 'remove') {
     foreach ($z in $M.zips) {
         $p = Join-Path $game $z.rel
         if (-not (Test-Path -LiteralPath $p)) { continue }
-        if ((Get-Item -LiteralPath $p).Length -gt $z.orig_size) {
-            [KL1.Engine]::Truncate($p, [long]$z.orig_size)
-            $h = [KL1.Engine]::Sha256Prefix($p, [long]$z.orig_size)
-            Write-Host ("  已還原 {0}{1}" -f $z.rel, $(if ($h -eq $z.orig_sha256) { '' } else { '（雜湊不符，請用 Steam 驗證完整性）' }))
+        $v = Resolve-Orig $z $p
+        if (-not $v) { Write-Host "  $($z.rel)：不是支援的版本，略過（請用 Steam 驗證完整性或 GOG Galaxy 驗證／修復）"; continue }
+        if ((Get-Item -LiteralPath $p).Length -gt $v.orig_size) {
+            [KL1.Engine]::Truncate($p, [long]$v.orig_size)
+            $h = [KL1.Engine]::Sha256Prefix($p, [long]$v.orig_size)
+            Write-Host ("  已還原 {0}{1}" -f $z.rel, $(if ($h -eq $v.orig_sha256) { '' } else { '（雜湊不符，請用 Steam 驗證完整性或 GOG Galaxy 驗證／修復）' }))
             $ok++
         }
     }
@@ -202,10 +240,10 @@ if ($Mode -eq 'install') {
             if (Test-Path -LiteralPath $p) { Remove-Item -LiteralPath $p -Force }
             Move-Item -LiteralPath $bk -Destination $p -Force
             $st = [KL1.Engine]::CheckOriginal($p, [long]$f.orig_size, $f.orig_sha256)
-            Write-Host ("  已還原 {0}{1}" -f $f.rel, $(if ($st -eq 0) { '' } else { '（雜湊不符，請用 Steam 驗證完整性）' }))
+            Write-Host ("  已還原 {0}{1}" -f $f.rel, $(if ($st -eq 0) { '' } else { '（雜湊不符，請用 Steam 驗證完整性或 GOG Galaxy 驗證／修復）' }))
             $ok++
         } elseif ((Test-Path -LiteralPath $p) -and ([KL1.Engine]::CheckOriginal($p, [long]$f.orig_size, $f.orig_sha256) -ne 0)) {
-            Write-Host "  $($f.rel)：找不到原檔備份，請用 Steam「驗證遊戲檔案完整性」還原"
+            Write-Host "  $($f.rel)：找不到原檔備份，請用 Steam「驗證遊戲檔案完整性」或 GOG Galaxy「驗證／修復」還原"
         }
     }
     Remove-Item -LiteralPath $state -ErrorAction SilentlyContinue
@@ -213,8 +251,9 @@ if ($Mode -eq 'install') {
 } else {
     foreach ($z in $M.zips) {
         $p = Join-Path $game $z.rel
-        $st = [KL1.Engine]::CheckOriginal($p, [long]$z.orig_size, $z.orig_sha256)
-        Write-Host ("  {0}: {1}" -f $z.rel, @{ 0 = '原版'; 1 = '已安裝補丁'; -1 = '不是原版' }[[int]$st])
+        $v = Resolve-Orig $z $p; $st = -1; $tag = ''
+        if ($v) { $st = [KL1.Engine]::CheckOriginal($p, [long]$v.orig_size, $v.orig_sha256); if ($v.label -ne 'steam') { $tag = "（$($v.label) 版）" } }
+        Write-Host ("  {0}: {1}{2}" -f $z.rel, @{ 0 = '原版'; 1 = '已安裝補丁'; -1 = '不是原版' }[[int]$st], $tag)
     }
     foreach ($f in $Files) {
         $p = Join-Path $game $f.rel; $st = -1

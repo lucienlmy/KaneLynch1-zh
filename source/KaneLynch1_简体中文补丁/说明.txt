@@ -1,14 +1,15 @@
 《Kane & Lynch: Dead Men》（喋血双雄 / 凯恩与林奇：死人）简体中文补丁
 
-适用：Steam 版（单人模式；多人模式 Fragile Alliance 的在线服务早已关闭）。
+适用：Steam 版与 GOG 版（单人模式；多人模式 Fragile Alliance 的在线服务早已关闭）。安装程序会自动找到 Steam 或 GOG 的游戏文件夹，两个都装了会列出让你选。
 
 安装：双击「安装简体中文.bat」，会自动找到游戏文件夹，核对原版文件后在 18 个场景封包尾部加上中文数据，并把片头视频换成压好中文字幕的版本（原文件改名 Movies\M00_Intro.bik.orig 留着）；约 2 分钟，请勿中途关闭。
-卸载：双击「卸载简体中文.bat」，把封包截回原长度、片头视频换回原文件，等同原版（也可用 Steam「验证游戏文件完整性」）。
+卸载：双击「卸载简体中文.bat」，把封包截回原长度、片头视频换回原文件，等同原版（也可用 Steam「验证游戏文件完整性」或 GOG Galaxy「管理安装 → 验证／修复」）。
 
 原理：翻译文字覆盖英文槽，字体补进封包，不改任何 exe，不需要 Python。
-游戏语言请保持英文（Steam 内容语言英文）。
+游戏语言请保持英文（Steam 内容语言英文；GOG 版游戏内「选项 → 语言」保持 English）。
+GOG 版主菜单只有「战役／选项／退出游戏」三项（没有多人游戏和指南），是 GOG 自己改的，和补丁无关。
 
-Win11 常见问题：
+Win11 常见问题（第 1、3 项只有 Steam 版有，GOG 版不用 Games for Windows LIVE）：
 1. 点启动没反应：先装游戏文件夹内的 XLiveRedist\XLiveRedist01.02.0241.00.msi（Games for Windows LIVE）。
 2. 出现「Direct3D: Unable to create device」：打开 %LOCALAPPDATA%\kaneandlynch\main.ini，在最后加一行 Window 1（窗口模式），需要的话再加 Resolution 1920x1200。
 3. 第一次进游戏 GFWL 要建立配置文件：选 Create New Profile → 输入名字 → Done，不需要在线账号。
