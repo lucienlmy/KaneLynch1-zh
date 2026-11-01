@@ -4,6 +4,8 @@
 
 **[⬇ 点这里到 Releases 下载 KaneLynch1_zh_v1.1.zip（约 169 MB）](https://github.com/toBerlinWay/KaneLynch1-zh/releases/latest)**
 
+图文安装指南（Steam 社区）：https://steamcommunity.com/sharedfiles/filedetails/?id=3831427589 ｜ GOG 论坛帖：https://www.gog.com/forum/kane_lynch_series/zhongwen_yidaijianfanzhongwenhuabuding_v11_kane_lynch_dead_men_chinese_localization_patch_v11
+
 > 请从 Releases 下载 zip。直接点绿色 Code → Download ZIP 下载到的只有安装脚本，没有补丁文件，装不了。
 
 zip 里有两个文件夹，按需要使用：
