@@ -39,7 +39,7 @@ zip 里有两个文件夹，按需要使用：
 这几个问题和汉化无关，原版就有（第 1、3 条只有 Steam 版有，GOG 版不用 Games for Windows LIVE）：
 
 - **点启动没反应**：这款游戏要 Games for Windows LIVE。先安装游戏文件夹里的 `XLiveRedist\XLiveRedist01.02.0241.00.msi`（微软签名的原版安装包）。
-- **「Direct3D: Unable to create device」**：用记事本打开 `%LOCALAPPDATA%\kaneandlynch\main.ini`，在最后加一行 `Window 1`（窗口模式）；想要大窗口再加一行 `Resolution 1920x1200`。
+- **「Direct3D: Unable to create device」**：用记事本打开 `%LOCALAPPDATA%\kaneandlynch\main.ini`，在最后加一行 `Window 1`（窗口模式）；想要大窗口再加一行 `Resolution （你自己电脑分辨率）`。
 - **第一次进游戏要建 GFWL 配置文件**：选 Create New Profile → 输入名字 → Done，不需要在线账号。
 - **键盘没反应**：有手柄连着时游戏只认手柄，拔掉手柄即可。
 
