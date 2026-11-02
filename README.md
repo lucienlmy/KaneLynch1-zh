@@ -2,7 +2,7 @@
 
 对应 Steam 版和 GOG 版（同一份补丁通用，安装程序会自动找到游戏文件夹）。一键安装、一键还原，不用装任何软件，不改 exe。
 
-**[⬇ 点这里到 Releases 下载 KaneLynch1_zh_v1.1.zip（约 169 MB）](https://github.com/toBerlinWay/KaneLynch1-zh/releases/latest)**
+**[⬇ 点这里到 Releases 下载 KaneLynch1_zh_v1.1.1.zip（约 169 MB）](https://github.com/toBerlinWay/KaneLynch1-zh/releases/latest)**
 
 图文安装指南（Steam 社区）：https://steamcommunity.com/sharedfiles/filedetails/?id=3831427589 ｜ GOG 论坛帖：https://www.gog.com/forum/kane_lynch_series/zhongwen_yidaijianfanzhongwenhuabuding_v11_kane_lynch_dead_men_chinese_localization_patch_v11
 
@@ -72,6 +72,12 @@ zip 里有两个文件夹，按需要使用：
 
 - 简体版是由繁体版用 OpenCC 转换、再替换菜单和常见用语得来的，没有另外逐句精翻，少数句子可能还带台湾口吻。欢迎回报。
 - 菜单文字较长时会在空格处优先换行，个别句子换行位置不太自然。
+
+## 更新记录
+
+- **v1.1.1**（2026-11-02）：修复安装程序在没有 D 盘或 E 盘的电脑上直接报错退出的问题（报错 `Cannot find drive. A drive with the name 'E' does not exist`）。现在只在电脑上实际存在的硬盘里找游戏；把补丁文件夹放进游戏文件夹再运行，也能直接找到游戏。汉化内容和 v1.1 相同，已经装好 v1.1 的不用重装。
+- **v1.1**：Steam 版和 GOG 版通用；片头视频加中文字幕（补丁因此多了约 60 MB）。文字与 v1.0 相同。
+- **v1.0**：首次版本（Steam 版）。
 
 ## 技术说明（给好奇的人）
 
