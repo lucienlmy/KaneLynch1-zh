@@ -126,22 +126,32 @@ public static class Engine {
 }
 '@
 
+# 找遊戲時只用字串組路徑：Join-Path 遇到不存在的磁碟機（例如電腦沒有 D 槽或 E 槽、Steam 遊戲庫在已拔掉的硬碟上）
+# 會丟 DriveNotFoundException，在 $ErrorActionPreference = 'Stop' 下整支腳本直接中止。[IO.Path]::Combine 只拼字串，不檢查磁碟機。
+function Join-PathSafe([string]$a, [string]$b) { [System.IO.Path]::Combine($a, $b) }
+
 function Find-Game {
-    if ($Game -and (Test-Path (Join-Path $Game 'kaneandlynch.exe'))) { return $Game }
+    if ($Game -and (Test-Path (Join-PathSafe $Game 'kaneandlynch.exe'))) { return $Game }
+    # 補丁資料夾放在遊戲資料夾裡（說明檔教的做法）
+    $up = Split-Path -Parent $here
+    if ($up -and (Test-Path -LiteralPath (Join-PathSafe $up 'kaneandlynch.exe'))) { return $up }
     $cands = @()
     try { $steam = (Get-ItemProperty 'HKCU:\Software\Valve\Steam' -ErrorAction Stop).SteamPath -replace '/', '\' } catch { $steam = $null }
     if ($steam) {
-        $cands += Join-Path $steam 'steamapps\common\Kane and Lynch Dead Men'
-        $vdf = Join-Path $steam 'steamapps\libraryfolders.vdf'
-        if (Test-Path $vdf) { foreach ($m in [regex]::Matches((Get-Content $vdf -Raw), '"path"\s+"([^"]+)"')) { $cands += Join-Path ($m.Groups[1].Value -replace '\\\\', '\') 'steamapps\common\Kane and Lynch Dead Men' } }
+        $cands += Join-PathSafe $steam 'steamapps\common\Kane and Lynch Dead Men'
+        $vdf = Join-PathSafe $steam 'steamapps\libraryfolders.vdf'
+        if (Test-Path $vdf) { foreach ($m in [regex]::Matches((Get-Content $vdf -Raw), '"path"\s+"([^"]+)"')) { $cands += Join-PathSafe ($m.Groups[1].Value -replace '\\\\', '\') 'steamapps\common\Kane and Lynch Dead Men' } }
     }
     foreach ($k in 'HKLM:\SOFTWARE\WOW6432Node\GOG.com\Games\1721096025', 'HKLM:\SOFTWARE\GOG.com\Games\1721096025') {
         try { $gp = (Get-ItemProperty $k -ErrorAction Stop).path; if ($gp) { $cands += $gp } } catch { }
     }
-    foreach ($root in @("${env:ProgramFiles(x86)}\GOG Galaxy\Games", 'C:\GOG Games', 'D:\GOG Games', 'E:\GOG Games', 'C:\', 'D:\', 'E:\')) { if ($root) { $cands += Join-Path $root 'Kane and Lynch Dead Men' } }
+    # 只掃描實際存在的硬碟，不寫死 C／D／E 槽
+    $drives = @([IO.DriveInfo]::GetDrives() | Where-Object { $_.DriveType -eq 'Fixed' -and $_.IsReady } | ForEach-Object { $_.RootDirectory.FullName })
+    $roots = @("${env:ProgramFiles(x86)}\GOG Galaxy\Games") + @($drives | ForEach-Object { Join-PathSafe $_ 'GOG Games' }) + $drives
+    foreach ($root in $roots) { if ($root) { $cands += Join-PathSafe $root 'Kane and Lynch Dead Men' } }
     $found = @()
     foreach ($c in $cands) {
-        if ($c -and (Test-Path (Join-Path $c 'kaneandlynch.exe'))) { $full = (Resolve-Path $c).Path.TrimEnd('\'); if ($found -notcontains $full) { $found += $full } }
+        if ($c -and (Test-Path (Join-PathSafe $c 'kaneandlynch.exe'))) { $full = (Resolve-Path $c).Path.TrimEnd('\'); if ($found -notcontains $full) { $found += $full } }
     }
     if ($found.Count -eq 1) { return $found[0] }
     if ($found.Count -gt 1) {
@@ -151,7 +161,7 @@ function Find-Game {
         if ($pick -match '^\d+$' -and [int]$pick -ge 1 -and [int]$pick -le $found.Count) { return $found[[int]$pick - 1] }
     }
     $typed = (Read-Host '找不到遊戲資料夾，請貼上含 kaneandlynch.exe 的資料夾路徑（Steam 版或 GOG 版都可以）').Trim('"', ' ')
-    if (Test-Path (Join-Path $typed 'kaneandlynch.exe')) { return $typed }
+    if (Test-Path (Join-PathSafe $typed 'kaneandlynch.exe')) { return $typed }
     throw '找不到遊戲資料夾'
 }
 
