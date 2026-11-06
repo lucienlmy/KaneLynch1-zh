@@ -2,7 +2,7 @@
 
 对应 Steam 版和 GOG 版（同一份补丁通用，安装程序会自动找到游戏文件夹）。一键安装、一键还原，不用装任何软件，不改 exe。
 
-**[⬇ 点这里到 Releases 下载 KaneLynch1_zh_v1.2.zip（约 170 MB）](https://github.com/toBerlinWay/KaneLynch1-zh/releases/latest)**
+**[⬇ 点这里到 Releases 下载 KaneLynch1_zh_v1.2.1.zip（约 168 MB）](https://github.com/toBerlinWay/KaneLynch1-zh/releases/latest)**
 
 图文安装指南（Steam 社区）：https://steamcommunity.com/sharedfiles/filedetails/?id=3831427589 ｜ GOG 论坛帖：https://www.gog.com/forum/kane_lynch_series/zhongwen_yidaijianfanzhongwenhuabuding_v11_kane_lynch_dead_men_chinese_localization_patch_v11
 
@@ -75,6 +75,7 @@ zip 里有两个文件夹，按需要使用：
 
 ## 更新记录
 
+- **v1.2.1**（2026-11-06）：修复 v1.2 在几乎所有电脑上都装不上的问题（提示「檔案與支援的版本（Steam／GOG）不符：Scenes/AllLevels/Loader_Sequence.zip」）。原因是打包时 17 个加载画面封包的原版校验值取错了（取到了作者电脑上已经改过的文件）。v1.2.1 改用真正的原版重新生成；另外加载画面封包万一对不上，现在只会跳过那一关的加载画面，其他照装。汉化内容和 v1.2 相同。感谢 B 站玩家回报。
 - **v1.2**（2026-11-06）：① 每关开头加载黑幕上的对白原版是图片，之前没有翻到，现在 16 关约 100 句都换成了中文图片，「Press any key to skip」「Loading」也改成「按任意键略过」「加载中」。② 修复简体版第 14 章（Within The Walls）一载入就闪退：游戏给每关贴图文件留的空间固定是 230 MB，加了中文字体后这一关超出约 0.36 MB；v1.2 把这一关的原版英文字体页改成压缩格式，腾出约 1.3 MB（繁体版原本刚好没超，也一并处理）。装过旧版的直接安装 v1.2 即可，会自动覆盖。
 - **v1.1.1**（2026-11-02）：修复安装程序在没有 D 盘或 E 盘的电脑上直接报错退出的问题（报错 `Cannot find drive. A drive with the name 'E' does not exist`）。现在只在电脑上实际存在的硬盘里找游戏；把补丁文件夹放进游戏文件夹再运行，也能直接找到游戏。汉化内容和 v1.1 相同，已经装好 v1.1 的不用重装。
 - **v1.1**：Steam 版和 GOG 版通用；片头视频加中文字幕（补丁因此多了约 60 MB）。文字与 v1.0 相同。
@@ -87,6 +88,7 @@ zip 里有两个文件夹，按需要使用：
 - 封包只在文件末尾追加数据，原本的字节完全不动；卸载就是截回原长度并核对 SHA-256。补丁包只带差异数据，安装时用玩家自己的原版文件重建。
 - 片头视频：用 ffmpeg＋libass 把字幕烧进每一帧，再用 RAD Video Tools 2026.09 的 Bink 1 压缩器（`RADVideo64.exe Binkc`，码率 1.0 MB/s）压回 .bik 并混回原音轨；游戏自带的 2002 年版 binkw32.dll 可直接解码。安装时整文件替换并保留原文件为 .orig，卸载时改回。
 - 制作工具（Python）在另一个工作目录，这里只放安装脚本源码。
+- 加载画面封包（v1.2.1 起）在清单里标为「可选」：游戏版本对不上时只跳过那一关，其他封包照装；安装前会先逐个核对原版的 SHA-256。
 
 ## 繁體中文說明
 

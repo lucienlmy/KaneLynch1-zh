@@ -191,9 +191,14 @@ if ($Mode -eq 'install') {
     $variants = @{}
     foreach ($z in $M.zips) {
         $p = Join-Path $game $z.rel
-        if (-not (Test-Path -LiteralPath $p)) { throw "找不到 $($z.rel)" }
+        # optional＝每關載入畫面的對白圖：版本對不上時只略過那一關，其他照裝
+        $opt = [bool]($z.PSObject.Properties['optional'] -and $z.optional)
+        if (-not (Test-Path -LiteralPath $p)) { if ($opt) { Write-Host "  略過 $($z.rel)：找不到這個檔（這一關的載入畫面對白維持英文）"; continue }; throw "找不到 $($z.rel)" }
         $v = Resolve-Orig $z $p
-        if (-not $v) { throw "檔案與支援的版本（Steam／GOG）不符：$($z.rel)（Steam 版請先「驗證遊戲檔案完整性」，GOG 版請用 Galaxy「驗證／修復」，再重新安裝補丁）" }
+        if (-not $v) {
+            if ($opt) { Write-Host "  略過 $($z.rel)：和支援的版本不同（這一關的載入畫面對白維持英文）"; continue }
+            throw "檔案與支援的版本（Steam／GOG）不符：$($z.rel)（Steam 版請先「驗證遊戲檔案完整性」，GOG 版請用 Galaxy「驗證／修復」，再重新安裝補丁）"
+        }
         $variants[$z.rel] = $v
     }
     foreach ($f in $Files) {
@@ -206,6 +211,7 @@ if ($Mode -eq 'install') {
     foreach ($z in $M.zips) {
         $p = Join-Path $game $z.rel
         $v = $variants[$z.rel]
+        if (-not $v) { continue }
         if ((Get-Item -LiteralPath $p).Length -gt $v.orig_size) { [KL1.Engine]::Truncate($p, [long]$v.orig_size) }
         $tag = ''; if ($v.label -ne 'steam') { $tag = "（$($v.label) 版原檔）" }
         Write-Host "  安裝 $($z.rel)$tag"
@@ -236,7 +242,7 @@ if ($Mode -eq 'install') {
         $p = Join-Path $game $z.rel
         if (-not (Test-Path -LiteralPath $p)) { continue }
         $v = Resolve-Orig $z $p
-        if (-not $v) { Write-Host "  $($z.rel)：不是支援的版本，略過（請用 Steam 驗證完整性或 GOG Galaxy 驗證／修復）"; continue }
+        if (-not $v) { if (-not ($z.PSObject.Properties['optional'] -and $z.optional)) { Write-Host "  $($z.rel)：不是支援的版本，略過（請用 Steam 驗證完整性或 GOG Galaxy 驗證／修復）" }; continue }
         if ((Get-Item -LiteralPath $p).Length -gt $v.orig_size) {
             [KL1.Engine]::Truncate($p, [long]$v.orig_size)
             $h = [KL1.Engine]::Sha256Prefix($p, [long]$v.orig_size)
