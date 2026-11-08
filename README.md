@@ -2,7 +2,7 @@
 
 对应 Steam 版和 GOG 版（同一份补丁通用，安装程序会自动找到游戏文件夹）。一键安装、一键还原，不用装任何软件，不改 exe。
 
-**[⬇ 点这里到 Releases 下载 KaneLynch1_zh_v1.2.1.zip（约 168 MB）](https://github.com/toBerlinWay/KaneLynch1-zh/releases/latest)**
+**[⬇ 点这里到 Releases 下载 KaneLynch1_zh_v1.2.2.zip（约 168 MB）](https://github.com/toBerlinWay/KaneLynch1-zh/releases/latest)**
 
 图文安装指南（Steam 社区）：https://steamcommunity.com/sharedfiles/filedetails/?id=3831427589 ｜ GOG 论坛帖：https://www.gog.com/forum/kane_lynch_series/zhongwen_yidaijianfanzhongwenhuabuding_v11_kane_lynch_dead_men_chinese_localization_patch_v11
 
@@ -28,7 +28,7 @@ zip 里有两个文件夹，按需要使用：
 1. 关闭游戏。
 2. 解压 zip，进入 `KaneLynch1_简体中文补丁_v1.2` 双击 `安装简体中文.bat`（繁体：进入 `KaneLynch1_繁體中文補丁_v1.2` 双击 `安裝繁體中文.bat`）。大约 2 分钟，看到「安裝完成」就好，中途不要关窗口。
 3. 游戏语言保持 English 即可。进游戏后到「选项 → 视频 → 字幕」确认字幕是开的。
-4. 安装程序会自动找 Steam 和 GOG 的游戏文件夹，两个都装了会列出让你选。如果提示找不到游戏文件夹，把游戏文件夹路径粘贴进去（里面要有 kaneandlynch.exe），或者把补丁文件夹放进游戏目录（Steam：库里右键游戏 → 管理 → 浏览本地文件；GOG Galaxy：游戏 → 管理安装 → 显示文件夹）再运行一次。
+4. 安装程序会自动找 Steam 和 GOG 的游戏文件夹，两个都装了会列出让你选。如果提示找不到游戏文件夹，把游戏里的 kaneandlynch.exe 拖进那个黑色窗口再按回车（粘贴游戏文件夹或 kaneandlynch.exe 的路径也可以），或者把补丁文件夹放进游戏目录（Steam：库里右键游戏 → 管理 → 浏览本地文件；GOG Galaxy：游戏 → 管理安装 → 显示文件夹）再运行一次。
 
 简体、繁体随时可以互换，直接安装另一个就好。
 
@@ -75,6 +75,7 @@ zip 里有两个文件夹，按需要使用：
 
 ## 更新记录
 
+- **v1.2.2**（2026-11-08）：安装程序找不到游戏文件夹时更好用：需要手动输入时，直接把 kaneandlynch.exe 拖进窗口就行，贴游戏文件夹、贴 kaneandlynch.exe 的路径或桌面快捷方式也都认，输错了可以重新输入（以前只认文件夹）；GOG 离线安装版、游戏放在 GameData 这类子文件夹里的版本，现在也能自动找到。汉化内容和 v1.2.1 相同，已经装好的不用重装。
 - **v1.2.1**（2026-11-06）：修复 v1.2 在几乎所有电脑上都装不上的问题（提示「檔案與支援的版本（Steam／GOG）不符：Scenes/AllLevels/Loader_Sequence.zip」）。原因是打包时 17 个加载画面封包的原版校验值取错了（取到了作者电脑上已经改过的文件）。v1.2.1 改用真正的原版重新生成；另外加载画面封包万一对不上，现在只会跳过那一关的加载画面，其他照装。汉化内容和 v1.2 相同。感谢 B 站玩家回报。
 - **v1.2**（2026-11-06）：① 每关开头加载黑幕上的对白原版是图片，之前没有翻到，现在 16 关约 100 句都换成了中文图片，「Press any key to skip」「Loading」也改成「按任意键略过」「加载中」。② 修复简体版第 14 章（Within The Walls）一载入就闪退：游戏给每关贴图文件留的空间固定是 230 MB，加了中文字体后这一关超出约 0.36 MB；v1.2 把这一关的原版英文字体页改成压缩格式，腾出约 1.3 MB（繁体版原本刚好没超，也一并处理）。装过旧版的直接安装 v1.2 即可，会自动覆盖。
 - **v1.1.1**（2026-11-02）：修复安装程序在没有 D 盘或 E 盘的电脑上直接报错退出的问题（报错 `Cannot find drive. A drive with the name 'E' does not exist`）。现在只在电脑上实际存在的硬盘里找游戏；把补丁文件夹放进游戏文件夹再运行，也能直接找到游戏。汉化内容和 v1.1 相同，已经装好 v1.1 的不用重装。

@@ -130,8 +130,34 @@ public static class Engine {
 # 會丟 DriveNotFoundException，在 $ErrorActionPreference = 'Stop' 下整支腳本直接中止。[IO.Path]::Combine 只拼字串，不檢查磁碟機。
 function Join-PathSafe([string]$a, [string]$b) { [System.IO.Path]::Combine($a, $b) }
 
+# 在 $base 底下找名字符合 $pattern、裡面有 kaneandlynch.exe 的資料夾；那一層沒有就再往下看一層（有些版本把遊戲放在 GameData 之類的子資料夾）。
+# $base 不存在或沒有權限就什麼都不回傳。
+function Find-GameIn([string]$base, [string]$pattern = '*') {
+    try {
+        foreach ($d in [IO.Directory]::GetDirectories($base, $pattern)) {
+            if (Test-Path -LiteralPath (Join-PathSafe $d 'kaneandlynch.exe') -PathType Leaf) { $d; continue }
+            try { foreach ($s in [IO.Directory]::GetDirectories($d)) { if (Test-Path -LiteralPath (Join-PathSafe $s 'kaneandlynch.exe') -PathType Leaf) { $s } } } catch { }
+        }
+    } catch { }
+}
+function Get-FullDir([string]$d) { $f = [IO.Path]::GetFullPath($d); if ($f.Length -gt 3) { $f = $f.TrimEnd('\') }; $f }
+# 玩家貼上或拖進視窗的位置：去掉前後的引號和空白；是捷徑就看它指向哪裡；是檔案（例如 kaneandlynch.exe）就取所在的資料夾；
+# 是遊戲資料夾的上一層（例如 D:\GOG Games）就往下找一層。找不到回傳 $null。
+function Resolve-GamePath([string]$s) {
+    $p = "$s".Trim().Trim([char]34, [char]39, [char]0x201C, [char]0x201D, [char]0x3000, ' ')
+    if (-not $p) { return $null }
+    try {
+        if ($p -like '*.lnk' -and (Test-Path -LiteralPath $p -PathType Leaf)) { $t = (New-Object -ComObject WScript.Shell).CreateShortcut($p).TargetPath; if ($t) { $p = $t } }
+        if (Test-Path -LiteralPath $p -PathType Leaf) { $p = [IO.Path]::GetDirectoryName($p) }
+        if (Test-Path -LiteralPath (Join-PathSafe $p 'kaneandlynch.exe') -PathType Leaf) { return (Get-FullDir $p) }
+        $sub = @(Find-GameIn $p)
+        if ($sub.Count -eq 1) { return (Get-FullDir $sub[0]) }
+    } catch { }
+    return $null
+}
+
 function Find-Game {
-    if ($Game -and (Test-Path (Join-PathSafe $Game 'kaneandlynch.exe'))) { return $Game }
+    if ($Game) { $d = Resolve-GamePath $Game; if ($d) { return $d } }
     # 補丁資料夾放在遊戲資料夾裡（說明檔教的做法）
     $up = Split-Path -Parent $here
     if ($up -and (Test-Path -LiteralPath (Join-PathSafe $up 'kaneandlynch.exe'))) { return $up }
@@ -145,13 +171,16 @@ function Find-Game {
     foreach ($k in 'HKLM:\SOFTWARE\WOW6432Node\GOG.com\Games\1721096025', 'HKLM:\SOFTWARE\GOG.com\Games\1721096025') {
         try { $gp = (Get-ItemProperty $k -ErrorAction Stop).path; if ($gp) { $cands += $gp } } catch { }
     }
-    # 只掃描實際存在的硬碟，不寫死 C／D／E 槽
+    # 只掃描實際存在的硬碟，不寫死 C／D／E 槽。GOG 資料夾名依安裝方式不同（Galaxy 是 Kane and Lynch Dead Men），用萬用字元找
     $drives = @([IO.DriveInfo]::GetDrives() | Where-Object { $_.DriveType -eq 'Fixed' -and $_.IsReady } | ForEach-Object { $_.RootDirectory.FullName })
-    $roots = @("${env:ProgramFiles(x86)}\GOG Galaxy\Games") + @($drives | ForEach-Object { Join-PathSafe $_ 'GOG Games' }) + $drives
-    foreach ($root in $roots) { if ($root) { $cands += Join-PathSafe $root 'Kane and Lynch Dead Men' } }
+    foreach ($r in $drives) {
+        foreach ($sub in '', 'GOG Games', 'GOG Galaxy\Games', 'Program Files (x86)\GOG Galaxy\Games', 'Program Files\GOG Galaxy\Games', 'Games', 'SteamLibrary\steamapps\common') {
+            $cands += @(Find-GameIn (Join-PathSafe $r $sub) 'Kane*Lynch*')
+        }
+    }
     $found = @()
     foreach ($c in $cands) {
-        if ($c -and (Test-Path (Join-PathSafe $c 'kaneandlynch.exe'))) { $full = (Resolve-Path $c).Path.TrimEnd('\'); if ($found -notcontains $full) { $found += $full } }
+        if ($c -and (Test-Path -LiteralPath (Join-PathSafe $c 'kaneandlynch.exe'))) { $full = (Resolve-Path -LiteralPath $c).Path.TrimEnd('\'); if ($found -notcontains $full) { $found += $full } }
     }
     if ($found.Count -eq 1) { return $found[0] }
     if ($found.Count -gt 1) {
@@ -160,9 +189,16 @@ function Find-Game {
         $pick = Read-Host '要安裝到哪一個？輸入編號'
         if ($pick -match '^\d+$' -and [int]$pick -ge 1 -and [int]$pick -le $found.Count) { return $found[[int]$pick - 1] }
     }
-    $typed = (Read-Host '找不到遊戲資料夾，請貼上含 kaneandlynch.exe 的資料夾路徑（Steam 版或 GOG 版都可以）').Trim('"', ' ')
-    if (Test-Path (Join-PathSafe $typed 'kaneandlynch.exe')) { return $typed }
-    throw '找不到遊戲資料夾'
+    # 資料夾、kaneandlynch.exe、捷徑都收；輸入錯了可以重來
+    Write-Host '找不到遊戲資料夾（Steam 版或 GOG 版都可以）。請把 kaneandlynch.exe 拖進這個視窗（或貼上遊戲資料夾的路徑），再按 Enter。'
+    while ($true) {
+        $in = Read-Host '遊戲位置'
+        if (-not "$in".Trim()) { throw '找不到遊戲資料夾' }
+        $d = Resolve-GamePath $in
+        if ($d) { return $d }
+        Write-Host ('這個位置找不到 kaneandlynch.exe：' + "$in".Trim()) -ForegroundColor Yellow
+        Write-Host '請再試一次，或直接按 Enter 結束。'
+    }
 }
 
 # 一個封包可能有多種原版（Steam 版、GOG 版…）：manifest 的 orig_size／orig_sha256 是主要版本，alts[] 是其他版本（可各自帶 entries）。
